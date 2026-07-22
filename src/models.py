@@ -31,3 +31,9 @@ class ClaimType(str, Enum):
             ClaimType.CONTRAINDICATION,
             ClaimType.WARNING,
         }
+
+class Reference(BaseModel):
+    source: str = Field(description="e.g. 'US Prescribing Information, apixaban'")
+    section: str = Field(description="e.g. '1 INDICATIONS AND USAGE'")
+    url: str | None = None
+    citation: str | None = None 
