@@ -37,3 +37,22 @@ class Reference(BaseModel):
     section: str = Field(description="e.g. '1 INDICATIONS AND USAGE'")
     url: str | None = None
     citation: str | None = None 
+
+class Claim(BaseModel):
+    id: str
+    drug: str
+    text: str
+    claim_type: ClaimType
+    reference: Reference
+    verified: bool = Field(default=False)
+    specialties: list[str] = Field(default_factory=list)
+    notes: str | None = None
+
+@field_validator("text")
+@classmethod
+def _non_trivial(cls, v: str) -> str:
+    if len(v.strip()) < 10:
+        raise ValueError("Claim text is too short to be meaningful")
+    return v.strip()
+
+
