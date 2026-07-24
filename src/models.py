@@ -64,5 +64,15 @@ class HCPProfile(BaseModel):
     adoption_stage: Literal["unaware", "aware", "evaluating", "occasional_prescriber", "advocate"] = "aware"
     notes: str | None = None
   
+class Channel(str, Enum):
+    EMAIL = "email"
+    DETAIL_AID = "detail_aid"
+    FOLLOW_UP = "follow_up"
 
+class Draft(BaseModel):
+    drug: str
+    channel: Channel
+    subject: str | None = None
+    body: str
+    claim_ids_used: list[str] = Field(default_factory=list)
 
