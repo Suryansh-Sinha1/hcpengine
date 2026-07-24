@@ -61,9 +61,8 @@ def searchable_text(self) -> str:
 class HCPProfile(BaseModel):
     specialty: str
     therapy_area: str
-    adoption_stage: Literal[
-        "unaware", "aware", "evaluating", "occasional_prescriber", "advocate"
-    ] = "aware"
+    adoption_stage: Literal["unaware", "aware", "evaluating", "occasional_prescriber", "advocate"] = "aware"
     notes: str | None = None
+  
 
 
