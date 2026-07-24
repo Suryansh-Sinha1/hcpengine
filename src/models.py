@@ -55,4 +55,15 @@ def _non_trivial(cls, v: str) -> str:
         raise ValueError("Claim text is too short to be meaningful")
     return v.strip()
 
+def searchable_text(self) -> str:
+    return f"{self.text} {self.claim_type.value} {' '.join(self.specialties)}"
+
+class HCPProfile(BaseModel):
+    specialty: str
+    therapy_area: str
+    adoption_stage: Literal[
+        "unaware", "aware", "evaluating", "occasional_prescriber", "advocate"
+    ] = "aware"
+    notes: str | None = None
+
 
