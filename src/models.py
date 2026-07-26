@@ -76,11 +76,11 @@ class Draft(BaseModel):
     body: str
     claim_ids_used: list[str] = Field(default_factory=list)
 
-@model_validator(mode="after")
-def _email_requires_subject(self):
-    if self.channel is Channel.EMAIL and not self.subject:
-        raise ValueError("Email drafts must include a subject line")
-    return self
+    @model_validator(mode="after")
+    def _email_requires_subject(self):
+        if self.channel is Channel.EMAIL and not self.subject:
+            raise ValueError("Email drafts must include a subject line")
+        return self
 
 
 
