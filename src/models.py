@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from __future__ import annotations
 
@@ -48,15 +48,15 @@ class Claim(BaseModel):
     specialties: list[str] = Field(default_factory=list)
     notes: str | None = None
 
-@field_validator("text")
-@classmethod
-def _non_trivial(cls, v: str) -> str:
-    if len(v.strip()) < 10:
-        raise ValueError("Claim text is too short to be meaningful")
-    return v.strip()
+    @field_validator("text")
+    @classmethod
+    def _non_trivial(cls, v: str) -> str:
+        if len(v.strip()) < 10:
+            raise ValueError("Claim text is too short to be meaningful")
+        return v.strip()
 
-def searchable_text(self) -> str:
-    return f"{self.text} {self.claim_type.value} {' '.join(self.specialties)}"
+    def searchable_text(self) -> str:
+        return f"{self.text} {self.claim_type.value} {' '.join(self.specialties)}"
 
 class HCPProfile(BaseModel):
     specialty: str
@@ -75,4 +75,12 @@ class Draft(BaseModel):
     subject: str | None = None
     body: str
     claim_ids_used: list[str] = Field(default_factory=list)
+
+@model_validator(mode="after")
+def _email_requires_subject(self):
+    if self.channel is Channel.EMAIL and not self.subject:
+        raise ValueError("Email drafts must include a subject line")
+    return self
+
+
 
