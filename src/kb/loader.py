@@ -24,3 +24,7 @@ class ClaimsKB:
         if not claims:
             raise ValueError(f"No claims loaded from {path}")
         return cls(claims)
+
+def __len__(self) -> int:
+        return len(self._claims)
+
