@@ -28,3 +28,23 @@ class ClaimsKB:
 def __len__(self) -> int:
         return len(self._claims)
 
+@property
+def claims(self) -> list[Claim]:
+        return list(self._claims)
+
+def get(self, claim_id: str) -> Claim | None:
+        return self._by_id.get(claim_id)
+
+def unverified(self) -> list[Claim]:
+        return [c for c in self._claims if not c.verified]
+
+def integrity_report(self) -> dict:
+        risk_side = [c for c in self._claims if c.claim_type.is_risk_side]
+        missing_ref = [c.id for c in self._claims if not c.reference.section.strip()]
+        return {
+            "total_claims": len(self._claims),
+            "drugs": sorted({c.drug for c in self._claims}),
+            "unverified": len(self.unverified()),
+            "risk_side_claims": len(risk_side),
+            "claims_missing_reference_section": missing_ref,
+        }
