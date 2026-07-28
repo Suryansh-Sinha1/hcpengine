@@ -1,9 +1,10 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
-
 from __future__ import annotations
 
 from enum import Enum
 from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+
 
 class ClaimType(str, Enum):
     INDICATION = "indication"
@@ -32,11 +33,13 @@ class ClaimType(str, Enum):
             ClaimType.WARNING,
         }
 
+
 class Reference(BaseModel):
     source: str = Field(description="e.g. 'US Prescribing Information, apixaban'")
     section: str = Field(description="e.g. '1 INDICATIONS AND USAGE'")
     url: str | None = None
-    citation: str | None = None 
+    citation: str | None = None
+
 
 class Claim(BaseModel):
     id: str
@@ -58,16 +61,26 @@ class Claim(BaseModel):
     def searchable_text(self) -> str:
         return f"{self.text} {self.claim_type.value} {' '.join(self.specialties)}"
 
+
+class RetrievedClaim(BaseModel):
+    claim: Claim
+    score: float
+
+
 class HCPProfile(BaseModel):
     specialty: str
     therapy_area: str
-    adoption_stage: Literal["unaware", "aware", "evaluating", "occasional_prescriber", "advocate"] = "aware"
+    adoption_stage: Literal[
+        "unaware", "aware", "evaluating", "occasional_prescriber", "advocate"
+    ] = "aware"
     notes: str | None = None
-  
+
+
 class Channel(str, Enum):
     EMAIL = "email"
     DETAIL_AID = "detail_aid"
     FOLLOW_UP = "follow_up"
+
 
 class Draft(BaseModel):
     drug: str
@@ -81,6 +94,3 @@ class Draft(BaseModel):
         if self.channel is Channel.EMAIL and not self.subject:
             raise ValueError("Email drafts must include a subject line")
         return self
-
-
-
