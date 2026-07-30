@@ -4,6 +4,7 @@ import logging
 
 from ..models import Claim, Draft
 from .deterministic import BannedTermRule, FairBalanceRule, UnverifiedClaimRule
+from .llm_judge import LLMJudgeRule
 from .models import ComplianceFlag, ComplianceReport, Rule, Severity
 
 logger = logging.getLogger(__name__)
@@ -49,13 +50,19 @@ _SEVERITY_ORDER: dict[Severity, int] = {
 }
 
 
-def default_engine(*, strict_verification: bool = False) -> ComplianceEngine:
-    return ComplianceEngine(
-        [
-            BannedTermRule(),
-            UnverifiedClaimRule(
-                severity=Severity.BLOCKER if strict_verification else Severity.WARNING
-            ),
-            FairBalanceRule(),
-        ]
-    )
+def default_engine(
+    *,
+    strict_verification: bool = False,
+    use_llm_judge: bool = True,
+    model: str | None = None,
+) -> ComplianceEngine:
+    rules: list[Rule] = [
+        BannedTermRule(),
+        UnverifiedClaimRule(
+            severity=Severity.BLOCKER if strict_verification else Severity.WARNING
+        ),
+        FairBalanceRule(),
+    ]
+    if use_llm_judge:
+        rules.append(LLMJudgeRule(model) if model else LLMJudgeRule())
+    return ComplianceEngine(rules)
