@@ -51,6 +51,9 @@ superior, breakthrough, miracle, guaranteed, cure, proven, well tolerated.
 enough - the reader must actually see it.
 6. You may rephrase claims for readability, but must not change their clinical \
 meaning, strength, or scope.
+7. You MUST list the ID of every approved claim you used in claim_ids_used. \
+The IDs look like [apx-ind-001]. An empty list is never correct - if you wrote \
+any content at all, you used claims. This field is mandatory.
 
 APPROVED CLAIMS - this is the complete set of assertions available to you:
 {claims_block}
@@ -62,9 +65,7 @@ FORMAT: {channel_brief}
 
 Respond with ONLY this JSON object:
 {{"subject": "<subject line, or null if not applicable>", "body": "<the \
-content>", "claim_ids_used": ["<id>", "<id>"]}}
-
-claim_ids_used must list the ID of every approved claim you drew on."""
+content>", "claim_ids_used": ["apx-ind-001", "apx-warn-001"]}}"""
 
 
 REVISION_TEMPLATE = """Your previous draft was rejected by compliance review.
@@ -84,6 +85,10 @@ _FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.MULTILINE)
 
 class GenerationError(RuntimeError):
     """Raised when model output cannot be parsed or cannot be trusted."""
+
+
+class ModelUnavailableError(GenerationError):
+    """The model could not be reached. Retrying will not help."""
 
 
 def render_claims_block(claims: list[Claim]) -> str:
@@ -148,14 +153,10 @@ class DraftGenerator:
             )
 
         try:
-            response = self._get_llm().invoke(
-                [("system", system), ("human", user)]
-            )
+            response = self._get_llm().invoke([("system", system), ("human", user)])
             raw = response.content
         except Exception as exc:
-            raise GenerationError(
-                f"Language model unavailable: {exc}"
-            ) from exc
+            raise ModelUnavailableError(f"Language model unavailable: {exc}") from exc
 
         return self._parse(raw, claims, drug, channel)
 
@@ -179,6 +180,12 @@ class DraftGenerator:
         if not isinstance(reported, list):
             raise GenerationError("claim_ids_used must be a list")
         reported = [str(cid) for cid in reported]
+
+        if not reported:
+            raise GenerationError(
+                "Model did not report any claim IDs. Content must cite the "
+                "approved claims it draws on."
+            )
 
         allowed = {c.id for c in claims}
         unknown = [cid for cid in reported if cid not in allowed]
