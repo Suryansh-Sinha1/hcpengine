@@ -117,6 +117,7 @@ class DraftGenerator:
                 model=self._model_name,
                 temperature=self._temperature,
                 format="json",
+                num_ctx=4096,
             )
         return self._llm
 
