@@ -9,7 +9,7 @@ from .models import ComplianceFlag, Severity
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "qwen2.5:14b-instruct"
+DEFAULT_MODEL = "llama3.1:8b"
 
 JUDGE_SYSTEM = """You are a pharmaceutical regulatory reviewer. You check \
 promotional content against an approved claim set.

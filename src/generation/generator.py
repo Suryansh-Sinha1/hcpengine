@@ -8,7 +8,7 @@ from ..models import Channel, Claim, Draft, HCPProfile
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_MODEL = "qwen2.5:14b-instruct"
+DEFAULT_MODEL = "llama3.1:8b"
 
 
 CHANNEL_BRIEF: dict[Channel, str] = {
