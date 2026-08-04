@@ -1,0 +1,28 @@
+[project]
+name = "hcp-engine"
+version = "0.1.0"
+description = "Compliance-checked promotional content for healthcare professionals"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "scikit-learn>=1.3",
+    "langchain-core>=0.3",
+    "langchain-ollama>=0.2",
+    "langgraph>=0.2",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "ruff>=0.6"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["hcp_engine*"]
+
+[tool.ruff]
+line-length = 88
