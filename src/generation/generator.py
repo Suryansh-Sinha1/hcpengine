@@ -54,6 +54,8 @@ meaning, strength, or scope.
 7. You MUST list the ID of every approved claim you used in claim_ids_used. \
 The IDs look like [apx-ind-001]. An empty list is never correct - if you wrote \
 any content at all, you used claims. This field is mandatory.
+8. Do NOT write claim IDs like [apx-ind-001] in the body text. The body is \
+read by a physician. Report IDs only in the claim_ids_used field.
 
 APPROVED CLAIMS - this is the complete set of assertions available to you:
 {claims_block}

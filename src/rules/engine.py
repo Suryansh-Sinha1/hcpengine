@@ -54,6 +54,7 @@ def default_engine(
     *,
     strict_verification: bool = False,
     use_llm_judge: bool = True,
+    judge_can_block: bool = False,
     model: str | None = None,
 ) -> ComplianceEngine:
     rules: list[Rule] = [
@@ -63,6 +64,15 @@ def default_engine(
         ),
         FairBalanceRule(),
     ]
+
     if use_llm_judge:
-        rules.append(LLMJudgeRule(model) if model else LLMJudgeRule())
+        judge_ceiling = (
+            Severity.BLOCKER if judge_can_block else Severity.WARNING
+        )
+        rules.append(
+            LLMJudgeRule(model, max_severity=judge_ceiling)
+            if model
+            else LLMJudgeRule(max_severity=judge_ceiling)
+        )
+
     return ComplianceEngine(rules)
