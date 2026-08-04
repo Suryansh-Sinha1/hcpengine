@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from ..models import Channel, ClaimType, HCPProfile
@@ -46,6 +48,36 @@ class GenerateResponse(BaseModel):
     flags: list[ComplianceFlag] = Field(default_factory=list)
     attempts: int = 0
     history: list[str] = Field(default_factory=list)
+
+
+class DecisionRequest(BaseModel):
+    decision: Literal["approved", "rejected"]
+    reviewer: str = Field(min_length=1, description="Who signed off")
+    note: str | None = None
+    drug: str = Field(min_length=1)
+    profile: HCPProfile
+    channel: Channel = Channel.EMAIL
+    subject: str | None = None
+    body: str = Field(min_length=1)
+    claim_ids: list[str] = Field(default_factory=list)
+
+
+class DecisionOut(BaseModel):
+    id: str
+    created_at: str
+    decision: str
+    reviewer: str
+    note: str | None = None
+    drug: str
+    channel: str
+    specialty: str
+    therapy_area: str
+    adoption_stage: str
+    subject: str | None = None
+    body: str
+    claim_ids: list[str] = Field(default_factory=list)
+    flags_at_decision: list[ComplianceFlag] = Field(default_factory=list)
+    passed_automated: bool
 
 
 class HealthResponse(BaseModel):

@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
 
 from ..config import settings
 from ..generation.generator import DraftGenerator
@@ -13,6 +14,7 @@ from ..kb.loader import ClaimsKB
 from ..kb.retriever import TfidfRetriever
 from ..models import Claim, Draft
 from ..rules.engine import ComplianceEngine, default_engine
+from ..rules.models import ComplianceReport
 from ..store.decisions import DecisionStore
 from .schemas import (
     ClaimOut,
@@ -213,15 +215,28 @@ def record_decision(
             status_code=404, detail=f"No approved claims for drug '{req.drug}'"
         )
 
-    draft = Draft(
-        drug=req.drug,
-        channel=req.channel,
-        subject=req.subject,
-        body=req.body,
-        claim_ids_used=req.claim_ids,
-    )
-
-    report = engine.check(draft, claims)
+    try:
+        draft = Draft(
+            drug=req.drug,
+            channel=req.channel,
+            subject=req.subject,
+            body=req.body,
+            claim_ids_used=req.claim_ids,
+        )
+    except ValidationError as exc:
+        # Malformed content is still rejectable - refusing to record a rejection
+        # because the draft is broken would lose the reviewer's verdict on
+        # exactly the content that most needs one.
+        if req.decision == "approved":
+            raise HTTPException(
+                status_code=422,
+                detail=f"Content is not a well-formed {req.channel.value} draft "
+                "and cannot be approved.",
+            ) from exc
+        draft = None
+        report = ComplianceReport()
+    else:
+        report = engine.check(draft, claims)
 
     if req.decision == "approved" and not report.passed:
         raise HTTPException(
@@ -247,7 +262,7 @@ def record_decision(
                 "body": req.body,
                 "claim_ids": req.claim_ids,
                 "flags_at_decision": [f.model_dump() for f in report.flags],
-                "passed_automated": report.passed,
+                "passed_automated": draft is not None and report.passed,
             }
         )
     )

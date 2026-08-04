@@ -4,15 +4,20 @@ import { useEffect, useRef, useState } from "react";
 import {
   generateContent,
   getHealth,
+  recordDecision,
   type AdoptionStage,
   type Channel,
   type ClaimOut,
   type ComplianceFlag,
+  type DecisionOut,
   type GenerateResponse,
   type HealthResponse,
 } from "@/lib/api";
 
-const SEVERITY_STYLE: Record<string, { bar: string; label: string; text: string }> = {
+const SEVERITY_STYLE: Record<
+  string,
+  { bar: string; label: string; text: string }
+> = {
   blocker: { bar: "bg-[#B3261E]", label: "text-[#B3261E]", text: "Blocker" },
   warning: { bar: "bg-[#8A5A00]", label: "text-[#8A5A00]", text: "Warning" },
   info: { bar: "bg-[#5B6675]", label: "text-[#5B6675]", text: "Note" },
@@ -28,13 +33,15 @@ const ADOPTION_STAGES: AdoptionStage[] = [
 
 const CHANNELS: Channel[] = ["email", "detail_aid", "follow_up"];
 
-/** Renders [apx-ind-001] markers in the body as inline citation chips. */
+const MONO = { fontFamily: "var(--font-mono)" };
+const SERIF = { fontFamily: "var(--font-serif)" };
+
 function AnnotatedBody({ body, claims }: { body: string; claims: ClaimOut[] }) {
   const byId = new Map(claims.map((c) => [c.id, c]));
   const parts = body.split(/(\[[a-z0-9-]+\])/gi);
 
   return (
-    <p className="whitespace-pre-wrap leading-[1.75] text-[17px]">
+    <p className="whitespace-pre-wrap text-[17px] leading-[1.75]">
       {parts.map((part, i) => {
         const match = part.match(/^\[([a-z0-9-]+)\]$/i);
         const claim = match ? byId.get(match[1]) : undefined;
@@ -43,8 +50,8 @@ function AnnotatedBody({ body, claims }: { body: string; claims: ClaimOut[] }) {
           <span
             key={i}
             title={`${claim.section} — ${claim.text}`}
-            className="mx-0.5 rounded-sm border border-[#D9DEE6] bg-white px-1 py-0.5 align-middle text-[11px] text-[#5B6675] cursor-help"
-            style={{ fontFamily: "var(--font-mono)" }}
+            className="mx-0.5 cursor-help rounded-sm border border-[#D9DEE6] bg-white px-1 py-0.5 align-middle text-[11px] text-[#5B6675]"
+            style={MONO}
           >
             {claim.id}
           </span>
@@ -57,19 +64,16 @@ function AnnotatedBody({ body, claims }: { body: string; claims: ClaimOut[] }) {
 function FlagCard({ flag }: { flag: ComplianceFlag }) {
   const style = SEVERITY_STYLE[flag.severity] ?? SEVERITY_STYLE.info;
   return (
-    <div className="relative border border-[#D9DEE6] bg-white pl-4 pr-4 py-3">
+    <div className="relative border border-[#D9DEE6] bg-white px-4 py-3">
       <span className={`absolute left-0 top-0 h-full w-1 ${style.bar}`} />
       <div className="mb-1.5 flex items-baseline justify-between gap-3">
         <span
           className={`text-[11px] uppercase tracking-wider ${style.label}`}
-          style={{ fontFamily: "var(--font-mono)" }}
+          style={MONO}
         >
           {style.text}
         </span>
-        <span
-          className="text-[11px] text-[#5B6675]"
-          style={{ fontFamily: "var(--font-mono)" }}
-        >
+        <span className="text-[11px] text-[#5B6675]" style={MONO}>
           {flag.rule_id}
         </span>
       </div>
@@ -82,6 +86,26 @@ function FlagCard({ flag }: { flag: ComplianceFlag }) {
         </p>
       )}
     </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span
+        className="mb-1 block text-[11px] uppercase tracking-wider text-[#5B6675]"
+        style={MONO}
+      >
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }
 
@@ -100,6 +124,12 @@ export default function Page() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [reviewer, setReviewer] = useState("");
+  const [note, setNote] = useState("");
+  const [deciding, setDeciding] = useState(false);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [decision, setDecision] = useState<DecisionOut | null>(null);
 
   useEffect(() => {
     getHealth()
@@ -123,6 +153,8 @@ export default function Page() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setDecision(null);
+    setDecisionError(null);
     try {
       const data = await generateContent({
         drug,
@@ -141,16 +173,44 @@ export default function Page() {
     }
   }
 
+  async function handleDecision(verdict: "approved" | "rejected") {
+    if (!result?.body) return;
+    setDeciding(true);
+    setDecisionError(null);
+    try {
+      const recorded = await recordDecision({
+        decision: verdict,
+        reviewer: reviewer.trim(),
+        note: note.trim() || null,
+        drug: result.drug,
+        profile: {
+          specialty,
+          therapy_area: therapyArea,
+          adoption_stage: stage,
+        },
+        channel: result.channel,
+        subject: result.subject,
+        body: result.body,
+        claim_ids: result.cited_claims.map((c) => c.id),
+      });
+      setDecision(recorded);
+    } catch (e) {
+      setDecisionError(
+        e instanceof Error ? e.message : "Could not record the decision."
+      );
+    } finally {
+      setDeciding(false);
+    }
+  }
+
   const blockers = result?.flags.filter((f) => f.severity === "blocker") ?? [];
   const advisories = result?.flags.filter((f) => f.severity !== "blocker") ?? [];
+  const canDecide = reviewer.trim().length > 0 && !deciding;
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <header className="border-b border-[#D9DEE6] pb-6">
-        <h1
-          className="text-[28px] font-semibold tracking-tight"
-          style={{ fontFamily: "var(--font-serif)" }}
-        >
+        <h1 className="text-[28px] font-semibold tracking-tight" style={SERIF}>
           HCP Content Engine
         </h1>
         <p className="mt-1 text-[14px] text-[#5B6675]">
@@ -160,7 +220,7 @@ export default function Page() {
         {health && (
           <div
             className="mt-4 flex flex-wrap gap-x-6 gap-y-1 text-[11px] text-[#5B6675]"
-            style={{ fontFamily: "var(--font-mono)" }}
+            style={MONO}
           >
             <span>{health.claims_loaded} claims</span>
             <span>{health.unverified_claims} awaiting verification</span>
@@ -257,10 +317,7 @@ export default function Page() {
                 ? "Passed automated checks — awaiting human approval"
                 : "Blocked — cannot be sent"}
             </span>
-            <span
-              className="text-[11px] text-[#5B6675]"
-              style={{ fontFamily: "var(--font-mono)" }}
-            >
+            <span className="text-[11px] text-[#5B6675]" style={MONO}>
               {result.attempts} attempt{result.attempts === 1 ? "" : "s"} ·{" "}
               {blockers.length} blocker · {advisories.length} advisory
             </span>
@@ -272,19 +329,16 @@ export default function Page() {
                 <>
                   <p
                     className="text-[11px] uppercase tracking-wider text-[#5B6675]"
-                    style={{ fontFamily: "var(--font-mono)" }}
+                    style={MONO}
                   >
                     Subject
                   </p>
-                  <h2
-                    className="mt-1 mb-5 text-[20px] font-semibold"
-                    style={{ fontFamily: "var(--font-serif)" }}
-                  >
+                  <h2 className="mb-5 mt-1 text-[20px] font-semibold" style={SERIF}>
                     {result.subject}
                   </h2>
                 </>
               )}
-              <div style={{ fontFamily: "var(--font-serif)" }}>
+              <div style={SERIF}>
                 {result.body && (
                   <AnnotatedBody
                     body={result.body}
@@ -296,7 +350,7 @@ export default function Page() {
               <div className="mt-8 border-t border-[#D9DEE6] pt-5">
                 <p
                   className="mb-3 text-[11px] uppercase tracking-wider text-[#5B6675]"
-                  style={{ fontFamily: "var(--font-mono)" }}
+                  style={MONO}
                 >
                   Sources — every statement traces here
                 </p>
@@ -305,18 +359,16 @@ export default function Page() {
                     <li key={c.id} className="flex gap-3 text-[13px]">
                       <span
                         className="shrink-0 text-[11px] text-[#5B6675]"
-                        style={{ fontFamily: "var(--font-mono)" }}
+                        style={MONO}
                       >
                         {c.id}
                       </span>
                       <span className="flex-1">
                         <span
                           className={
-                            c.is_risk_side
-                              ? "text-[#B3261E]"
-                              : "text-[#5B6675]"
+                            c.is_risk_side ? "text-[#B3261E]" : "text-[#5B6675]"
                           }
-                          style={{ fontFamily: "var(--font-mono)" }}
+                          style={MONO}
                         >
                           {c.section}
                         </span>
@@ -338,7 +390,7 @@ export default function Page() {
             <aside className="space-y-3">
               <p
                 className="text-[11px] uppercase tracking-wider text-[#5B6675]"
-                style={{ fontFamily: "var(--font-mono)" }}
+                style={MONO}
               >
                 Review margin
               </p>
@@ -354,7 +406,7 @@ export default function Page() {
               <div className="border border-[#D9DEE6] bg-white p-4">
                 <p
                   className="mb-2 text-[11px] uppercase tracking-wider text-[#5B6675]"
-                  style={{ fontFamily: "var(--font-mono)" }}
+                  style={MONO}
                 >
                   Run log
                 </p>
@@ -365,41 +417,102 @@ export default function Page() {
                 </ol>
               </div>
 
-              <div className="flex gap-2 pt-1">
-                <button
-                  disabled={!result.passed}
-                  className="flex-1 bg-[#14624A] px-3 py-2 text-[13px] text-white disabled:bg-[#9AA5B4]"
-                >
-                  Approve
-                </button>
-                <button className="flex-1 border border-[#D9DEE6] bg-white px-3 py-2 text-[13px]">
-                  Reject
-                </button>
-              </div>
+              {decision ? (
+                <div className="border border-[#D9DEE6] bg-white p-4">
+                  <p
+                    className="mb-2 text-[11px] uppercase tracking-wider text-[#5B6675]"
+                    style={MONO}
+                  >
+                    Recorded
+                  </p>
+                  <p
+                    className={`text-[14px] font-medium ${
+                      decision.decision === "approved"
+                        ? "text-[#14624A]"
+                        : "text-[#B3261E]"
+                    }`}
+                  >
+                    {decision.decision === "approved" ? "Approved" : "Rejected"}{" "}
+                    by {decision.reviewer}
+                  </p>
+                  {decision.note && (
+                    <p className="mt-2 text-[13px] leading-relaxed text-[#5B6675]">
+                      {decision.note}
+                    </p>
+                  )}
+                  <p className="mt-3 text-[11px] text-[#5B6675]" style={MONO}>
+                    {new Date(decision.created_at).toLocaleString()}
+                  </p>
+                  <p className="mt-1 break-all text-[11px] text-[#5B6675]" style={MONO}>
+                    {decision.id}
+                  </p>
+                  <p className="mt-3 text-[12px] leading-relaxed text-[#5B6675]">
+                    This record cannot be edited. A change of mind is recorded
+                    as a new decision.
+                  </p>
+                </div>
+              ) : (
+                <div className="border border-[#D9DEE6] bg-white p-4">
+                  <p
+                    className="mb-3 text-[11px] uppercase tracking-wider text-[#5B6675]"
+                    style={MONO}
+                  >
+                    Sign-off
+                  </p>
+                  <Field label="Reviewer">
+                    <input
+                      className="w-full border border-[#D9DEE6] px-2 py-1.5 text-[14px] outline-none focus:border-[#16202E]"
+                      placeholder="Your name"
+                      value={reviewer}
+                      onChange={(e) => setReviewer(e.target.value)}
+                    />
+                  </Field>
+                  <div className="mt-3">
+                    <Field label="Note (optional)">
+                      <textarea
+                        rows={3}
+                        className="w-full resize-none border border-[#D9DEE6] px-2 py-1.5 text-[14px] outline-none focus:border-[#16202E]"
+                        placeholder="Reasoning for the record"
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                      />
+                    </Field>
+                  </div>
+
+                  {decisionError && (
+                    <p className="mt-3 border-l-2 border-[#B3261E] pl-2 text-[12px] leading-relaxed text-[#B3261E]">
+                      {decisionError}
+                    </p>
+                  )}
+
+                  <div className="mt-4 flex gap-2">
+                    <button
+                      onClick={() => handleDecision("approved")}
+                      disabled={!canDecide || !result.passed}
+                      className="flex-1 bg-[#14624A] px-3 py-2 text-[13px] text-white transition-colors hover:bg-[#1A7A5A] disabled:bg-[#9AA5B4]"
+                    >
+                      {deciding ? "Saving…" : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => handleDecision("rejected")}
+                      disabled={!canDecide}
+                      className="flex-1 border border-[#D9DEE6] bg-white px-3 py-2 text-[13px] transition-colors hover:bg-[#F7F8FA] disabled:text-[#9AA5B4]"
+                    >
+                      Reject
+                    </button>
+                  </div>
+
+                  {!result.passed && (
+                    <p className="mt-2 text-[12px] leading-relaxed text-[#5B6675]">
+                      Approval is unavailable while blocking issues remain.
+                    </p>
+                  )}
+                </div>
+              )}
             </aside>
           </div>
         </>
       )}
     </main>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span
-        className="mb-1 block text-[11px] uppercase tracking-wider text-[#5B6675]"
-        style={{ fontFamily: "var(--font-mono)" }}
-      >
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }

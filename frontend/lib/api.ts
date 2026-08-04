@@ -7,6 +7,12 @@ export type AdoptionStage =
   | "occasional_prescriber"
   | "advocate";
 
+export interface HCPProfile {
+  specialty: string;
+  therapy_area: string;
+  adoption_stage: AdoptionStage;
+}
+
 export interface ClaimOut {
   id: string;
   drug: string;
@@ -37,6 +43,24 @@ export interface GenerateResponse {
   flags: ComplianceFlag[];
   attempts: number;
   history: string[];
+}
+
+export interface DecisionOut {
+  id: string;
+  created_at: string;
+  decision: string;
+  reviewer: string;
+  note: string | null;
+  drug: string;
+  channel: string;
+  specialty: string;
+  therapy_area: string;
+  adoption_stage: string;
+  subject: string | null;
+  body: string;
+  claim_ids: string[];
+  flags_at_decision: ComplianceFlag[];
+  passed_automated: boolean;
 }
 
 export interface HealthResponse {
@@ -75,15 +99,32 @@ export function getHealth() {
 
 export function generateContent(input: {
   drug: string;
-  profile: {
-    specialty: string;
-    therapy_area: string;
-    adoption_stage: AdoptionStage;
-  };
+  profile: HCPProfile;
   channel: Channel;
 }) {
   return request<GenerateResponse>("/generate", {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function recordDecision(input: {
+  decision: "approved" | "rejected";
+  reviewer: string;
+  note: string | null;
+  drug: string;
+  profile: HCPProfile;
+  channel: Channel;
+  subject: string | null;
+  body: string;
+  claim_ids: string[];
+}) {
+  return request<DecisionOut>("/decisions", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function listDecisions(limit = 50) {
+  return request<DecisionOut[]>(`/decisions?limit=${limit}`);
 }
