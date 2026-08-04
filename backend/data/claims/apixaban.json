@@ -1,0 +1,179 @@
+{
+  "drug": "apixaban",
+  "_comment": "DEMO SEED DATA. Every claim is verified=false on purpose. Before use beyond a local demo, each must be checked line-by-line against the current approved prescribing information (and the CDSCO package insert for India) and flipped to true by a human.",
+  "claims": [
+    {
+      "id": "apx-ind-001",
+      "drug": "apixaban",
+      "text": "Apixaban is indicated to reduce the risk of stroke and systemic embolism in patients with nonvalvular atrial fibrillation.",
+      "claim_type": "indication",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "1 INDICATIONS AND USAGE",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": ["cardiology", "internal medicine", "general practice"]
+    },
+    {
+      "id": "apx-ind-002",
+      "drug": "apixaban",
+      "text": "Apixaban is indicated for the prophylaxis of deep vein thrombosis, which may lead to pulmonary embolism, in patients who have undergone hip or knee replacement surgery.",
+      "claim_type": "indication",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "1 INDICATIONS AND USAGE",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": ["orthopedics", "internal medicine"]
+    },
+    {
+      "id": "apx-ind-003",
+      "drug": "apixaban",
+      "text": "Apixaban is indicated for the treatment of deep vein thrombosis and pulmonary embolism, and to reduce the risk of recurrent deep vein thrombosis and pulmonary embolism following initial therapy.",
+      "claim_type": "indication",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "1 INDICATIONS AND USAGE",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": ["cardiology", "pulmonology", "internal medicine"]
+    },
+    {
+      "id": "apx-dos-001",
+      "drug": "apixaban",
+      "text": "The recommended dose for reducing the risk of stroke and systemic embolism in nonvalvular atrial fibrillation is 5 mg taken orally twice daily.",
+      "claim_type": "dosing",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "2 DOSAGE AND ADMINISTRATION",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": ["cardiology", "internal medicine", "general practice"]
+    },
+    {
+      "id": "apx-dos-002",
+      "drug": "apixaban",
+      "text": "In patients with at least two of the following characteristics - age 80 years or older, body weight 60 kg or less, or serum creatinine 1.5 mg/dL or greater - the recommended dose is 2.5 mg taken orally twice daily.",
+      "claim_type": "dosing",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "2 DOSAGE AND ADMINISTRATION",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": ["cardiology", "internal medicine", "geriatrics"]
+    },
+    {
+      "id": "apx-mec-001",
+      "drug": "apixaban",
+      "text": "Apixaban is a selective inhibitor of factor Xa.",
+      "claim_type": "mechanism",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "12.1 MECHANISM OF ACTION",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": []
+    },
+    {
+      "id": "apx-warn-001",
+      "drug": "apixaban",
+      "text": "Premature discontinuation of any oral anticoagulant, including apixaban, increases the risk of thrombotic events. If anticoagulation with apixaban is discontinued for a reason other than pathological bleeding or completion of a course of therapy, consider coverage with another anticoagulant.",
+      "claim_type": "warning",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "BOXED WARNING",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": [],
+      "notes": "Boxed warning. Must be surfaced in any promotional content making efficacy claims."
+    },
+    {
+      "id": "apx-warn-002",
+      "drug": "apixaban",
+      "text": "Epidural or spinal hematomas may occur in patients treated with apixaban who are receiving neuraxial anesthesia or undergoing spinal puncture. These hematomas may result in long-term or permanent paralysis.",
+      "claim_type": "warning",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "BOXED WARNING",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": ["anesthesiology", "orthopedics"],
+      "notes": "Boxed warning."
+    },
+    {
+      "id": "apx-con-001",
+      "drug": "apixaban",
+      "text": "Apixaban is contraindicated in patients with active pathological bleeding.",
+      "claim_type": "contraindication",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "4 CONTRAINDICATIONS",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": []
+    },
+    {
+      "id": "apx-con-002",
+      "drug": "apixaban",
+      "text": "Apixaban is contraindicated in patients with a history of severe hypersensitivity reaction to apixaban.",
+      "claim_type": "contraindication",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "4 CONTRAINDICATIONS",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": []
+    },
+    {
+      "id": "apx-saf-001",
+      "drug": "apixaban",
+      "text": "Apixaban increases the risk of bleeding and can cause serious, potentially fatal, bleeding.",
+      "claim_type": "safety",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "5 WARNINGS AND PRECAUTIONS",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": []
+    },
+    {
+      "id": "apx-saf-002",
+      "drug": "apixaban",
+      "text": "The most common adverse reaction reported with apixaban is bleeding.",
+      "claim_type": "safety",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "6 ADVERSE REACTIONS",
+        "url": "https://dailymed.nlm.nih.gov/"
+      },
+      "verified": false,
+      "specialties": []
+    },
+    {
+      "id": "apx-trial-001",
+      "drug": "apixaban",
+      "text": "In the ARISTOTLE trial, apixaban was compared with warfarin in patients with nonvalvular atrial fibrillation and at least one additional risk factor for stroke.",
+      "claim_type": "trial_data",
+      "reference": {
+        "source": "US Prescribing Information, apixaban",
+        "section": "14 CLINICAL STUDIES",
+        "url": "https://dailymed.nlm.nih.gov/",
+        "citation": "Granger CB, et al. Apixaban versus Warfarin in Patients with Atrial Fibrillation. N Engl J Med. 2011."
+      },
+      "verified": false,
+      "specialties": ["cardiology", "internal medicine"],
+      "notes": "Any comparative efficacy statement must be checked against the label's own wording and the trial's stated endpoints."
+    }
+  ]
+}

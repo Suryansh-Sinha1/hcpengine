@@ -66,13 +66,7 @@ def default_engine(
     ]
 
     if use_llm_judge:
-        judge_ceiling = (
-            Severity.BLOCKER if judge_can_block else Severity.WARNING
-        )
-        rules.append(
-            LLMJudgeRule(model, max_severity=judge_ceiling)
-            if model
-            else LLMJudgeRule(max_severity=judge_ceiling)
-        )
+        judge_ceiling = Severity.BLOCKER if judge_can_block else Severity.WARNING
+        rules.append(LLMJudgeRule(model, max_severity=judge_ceiling))
 
     return ComplianceEngine(rules)

@@ -4,12 +4,11 @@ import json
 import logging
 import re
 
+from ..config import settings
 from ..models import Claim, Draft
 from .models import ComplianceFlag, Severity
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MODEL = "llama3.1:8b"
 
 JUDGE_SYSTEM = """You are a pharmaceutical regulatory reviewer. You check \
 promotional content against an approved claim set.
@@ -48,12 +47,12 @@ class LLMJudgeRule:
 
     def __init__(
         self,
-        model: str = DEFAULT_MODEL,
+        model: str | None = None,
         *,
         on_error: Severity = Severity.WARNING,
         max_severity: Severity = Severity.BLOCKER,
     ) -> None:
-        self._model_name = model
+        self._model_name = model or settings.ollama_model
         self._on_error = on_error
         self._max_severity = max_severity
         self._llm = None
@@ -66,6 +65,7 @@ class LLMJudgeRule:
                 model=self._model_name,
                 temperature=0,
                 format="json",
+                num_ctx=settings.ollama_num_ctx,
             )
         return self._llm
 

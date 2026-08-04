@@ -4,11 +4,10 @@ import json
 import logging
 import re
 
+from ..config import settings
 from ..models import Channel, Claim, Draft, HCPProfile
 
 logger = logging.getLogger(__name__)
-
-DEFAULT_MODEL = "llama3.1:8b"
 
 
 CHANNEL_BRIEF: dict[Channel, str] = {
@@ -106,9 +105,13 @@ def render_claims_block(claims: list[Claim]) -> str:
 
 
 class DraftGenerator:
-    def __init__(self, model: str = DEFAULT_MODEL, *, temperature: float = 0.2) -> None:
-        self._model_name = model
-        self._temperature = temperature
+    def __init__(
+        self, model: str | None = None, *, temperature: float | None = None
+    ) -> None:
+        self._model_name = model or settings.ollama_model
+        self._temperature = (
+            settings.generation_temperature if temperature is None else temperature
+        )
         self._llm = None
 
     def _get_llm(self):
@@ -119,7 +122,7 @@ class DraftGenerator:
                 model=self._model_name,
                 temperature=self._temperature,
                 format="json",
-                num_ctx=4096,
+                num_ctx=settings.ollama_num_ctx,
             )
         return self._llm
 

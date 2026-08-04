@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from ..config import settings
 from ..generation.generator import DraftGenerator
 from ..graph.workflow import build_workflow, run_workflow
 from ..kb.loader import ClaimsKB
@@ -24,8 +24,6 @@ from .schemas import (
 
 logger = logging.getLogger(__name__)
 
-CLAIMS_DIR = Path(__file__).resolve().parents[2] / "data" / "claims"
-
 
 def to_claim_out(claim: Claim) -> ClaimOut:
     return ClaimOut(
@@ -42,12 +40,17 @@ def to_claim_out(claim: Claim) -> ClaimOut:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Loading claims from %s", CLAIMS_DIR)
-    kb = ClaimsKB.from_dir(CLAIMS_DIR)
+    logger.info("Loading claims from %s", settings.claims_dir)
+    kb = ClaimsKB.from_dir(settings.claims_dir)
     retriever = TfidfRetriever(kb)
     generator = DraftGenerator()
-    engine = default_engine()
-    graph = build_workflow(kb, retriever, generator, engine)
+    engine = default_engine(
+        strict_verification=settings.strict_verification,
+        judge_can_block=settings.judge_can_block,
+    )
+    graph = build_workflow(
+        kb, retriever, generator, engine, max_attempts=settings.max_attempts
+    )
 
     app.state.kb = kb
     app.state.retriever = retriever
@@ -70,7 +73,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
