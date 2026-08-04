@@ -11,10 +11,13 @@ from ..generation.generator import DraftGenerator
 from ..graph.workflow import build_workflow, run_workflow
 from ..kb.loader import ClaimsKB
 from ..kb.retriever import TfidfRetriever
-from ..models import Claim
-from ..rules.engine import default_engine
+from ..models import Claim, Draft
+from ..rules.engine import ComplianceEngine, default_engine
+from ..store.decisions import DecisionStore
 from .schemas import (
     ClaimOut,
+    DecisionOut,
+    DecisionRequest,
     GenerateRequest,
     GenerateResponse,
     HealthResponse,
@@ -56,6 +59,8 @@ async def lifespan(app: FastAPI):
     app.state.retriever = retriever
     app.state.engine = engine
     app.state.graph = graph
+    app.state.store = DecisionStore(settings.database_path)
+
     logger.info("Ready: %d claims, rules %s", len(kb), engine.rule_ids)
 
     yield
@@ -88,19 +93,30 @@ def get_retriever(request: Request) -> TfidfRetriever:
     return request.app.state.retriever
 
 
+def get_engine(request: Request) -> ComplianceEngine:
+    return request.app.state.engine
+
+
+def get_store(request: Request) -> DecisionStore:
+    return request.app.state.store
+
+
 def get_graph(request: Request):
     return request.app.state.graph
 
 
 @app.get("/health", response_model=HealthResponse)
-def health(request: Request, kb: ClaimsKB = Depends(get_kb)) -> HealthResponse:
+def health(
+    kb: ClaimsKB = Depends(get_kb),
+    engine: ComplianceEngine = Depends(get_engine),
+) -> HealthResponse:
     report = kb.integrity_report()
     return HealthResponse(
         status="ok",
         claims_loaded=report["total_claims"],
         drugs=report["drugs"],
         unverified_claims=report["unverified"],
-        active_rules=request.app.state.engine.rule_ids,
+        active_rules=engine.rule_ids,
     )
 
 
@@ -133,7 +149,9 @@ def search_claims(
         SearchHit(
             claim=to_claim_out(r.claim),
             score=r.score,
-            matched_terms=[term for term, _ in retriever.explain(req.query, r.claim.id)],
+            matched_terms=[
+                term for term, _ in retriever.explain(req.query, r.claim.id)
+            ],
         )
         for r in results
     ]
@@ -180,3 +198,63 @@ def generate_content(
         attempts=state.get("attempts", 0),
         history=state.get("history", []),
     )
+
+
+@app.post("/decisions", response_model=DecisionOut, status_code=201)
+def record_decision(
+    req: DecisionRequest,
+    kb: ClaimsKB = Depends(get_kb),
+    engine: ComplianceEngine = Depends(get_engine),
+    store: DecisionStore = Depends(get_store),
+) -> DecisionOut:
+    claims = kb.for_drug(req.drug)
+    if not claims:
+        raise HTTPException(
+            status_code=404, detail=f"No approved claims for drug '{req.drug}'"
+        )
+
+    draft = Draft(
+        drug=req.drug,
+        channel=req.channel,
+        subject=req.subject,
+        body=req.body,
+        claim_ids_used=req.claim_ids,
+    )
+
+    report = engine.check(draft, claims)
+
+    if req.decision == "approved" and not report.passed:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Content cannot be approved: it has "
+                f"{len(report.blockers)} blocking compliance issue(s)."
+            ),
+        )
+
+    return DecisionOut(
+        **store.record(
+            {
+                "decision": req.decision,
+                "reviewer": req.reviewer,
+                "note": req.note,
+                "drug": req.drug,
+                "channel": req.channel.value,
+                "specialty": req.profile.specialty,
+                "therapy_area": req.profile.therapy_area,
+                "adoption_stage": req.profile.adoption_stage,
+                "subject": req.subject,
+                "body": req.body,
+                "claim_ids": req.claim_ids,
+                "flags_at_decision": [f.model_dump() for f in report.flags],
+                "passed_automated": report.passed,
+            }
+        )
+    )
+
+
+@app.get("/decisions", response_model=list[DecisionOut])
+def list_decisions(
+    limit: int = 50, store: DecisionStore = Depends(get_store)
+) -> list[DecisionOut]:
+    return [DecisionOut(**d) for d in store.list_recent(limit)]
