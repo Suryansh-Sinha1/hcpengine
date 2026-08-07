@@ -34,11 +34,35 @@ class ClaimType(str, Enum):
         }
 
 
+class SourceType(str, Enum):
+    """Where a claim came from, which determines what it may be used for.
+
+    Promotional content to physicians must be on-label. A claim extracted from
+    a publication may substantiate an on-label statement, but it cannot itself
+    license a claim the approved labelling does not make.
+    """
+
+    LABEL = "label"
+    PUBLICATION = "publication"
+    INTERNAL = "internal"
+
+    @property
+    def is_promotional_source(self) -> bool:
+        return self is SourceType.LABEL
+
+
 class Reference(BaseModel):
     source: str = Field(description="e.g. 'US Prescribing Information, apixaban'")
     section: str = Field(description="e.g. '1 INDICATIONS AND USAGE'")
+    source_type: SourceType = SourceType.LABEL
     url: str | None = None
     citation: str | None = None
+    page: int | None = Field(
+        default=None, description="Page in the source document, if ingested"
+    )
+    document_id: str | None = Field(
+        default=None, description="Groups claims extracted from one upload"
+    )
 
 
 class Claim(BaseModel):
@@ -60,6 +84,10 @@ class Claim(BaseModel):
 
     def searchable_text(self) -> str:
         return f"{self.text} {self.claim_type.value} {' '.join(self.specialties)}"
+
+    @property
+    def is_promotional_source(self) -> bool:
+        return self.reference.source_type.is_promotional_source
 
 
 class RetrievedClaim(BaseModel):

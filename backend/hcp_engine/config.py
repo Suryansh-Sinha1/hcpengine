@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Workflow
     max_attempts: int = 3
 
+    ingest_chunk_chars: int = 2500
+    ingest_max_chunks: int = 8
+
     # Compliance posture
     strict_verification: bool = False
     judge_can_block: bool = False

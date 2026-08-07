@@ -27,6 +27,9 @@ class ClaimOut(BaseModel):
     claim_type: ClaimType
     source: str
     section: str
+    source_type: SourceType
+    page: int | None = None
+    document_id: str | None = None
     verified: bool
     is_risk_side: bool
 
@@ -86,3 +89,20 @@ class HealthResponse(BaseModel):
     drugs: list[str]
     unverified_claims: int
     active_rules: list[str]
+
+class IngestResponse(BaseModel):
+    document_id: str
+    drug: str
+    source_name: str
+    source_type: SourceType
+    claims_extracted: int
+    claims: list[ClaimOut]
+
+
+class DocumentOut(BaseModel):
+    document_id: str
+    drug: str
+    source_name: str
+    source_type: SourceType
+    claim_count: int
+    verified_count: int
