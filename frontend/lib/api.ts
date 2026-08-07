@@ -1,5 +1,6 @@
 export type Severity = "blocker" | "warning" | "info";
 export type Channel = "email" | "detail_aid" | "follow_up";
+export type SourceType = "label" | "publication" | "internal";
 export type AdoptionStage =
   | "unaware"
   | "aware"
@@ -20,6 +21,9 @@ export interface ClaimOut {
   claim_type: string;
   source: string;
   section: string;
+  source_type: SourceType;
+  page: number | null;
+  document_id: string | null;
   verified: boolean;
   is_risk_side: boolean;
 }
@@ -63,6 +67,24 @@ export interface DecisionOut {
   passed_automated: boolean;
 }
 
+export interface DocumentOut {
+  document_id: string;
+  drug: string;
+  source_name: string;
+  source_type: SourceType;
+  claim_count: number;
+  verified_count: number;
+}
+
+export interface IngestResponse {
+  document_id: string;
+  drug: string;
+  source_name: string;
+  source_type: SourceType;
+  claims_extracted: number;
+  claims: ClaimOut[];
+}
+
 export interface HealthResponse {
   status: string;
   claims_loaded: number;
@@ -74,9 +96,13 @@ export interface HealthResponse {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const isForm = init?.body instanceof FormData;
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: isForm
+      ? init?.headers
+      : { "Content-Type": "application/json", ...init?.headers },
   });
 
   if (!res.ok) {
@@ -97,10 +123,30 @@ export function getHealth() {
   return request<HealthResponse>("/health");
 }
 
+export function listDocuments() {
+  return request<DocumentOut[]>("/documents");
+}
+
+export function ingestDocument(input: {
+  file: File;
+  drug: string;
+  source_name: string;
+  source_type: SourceType;
+}) {
+  const form = new FormData();
+  form.append("file", input.file);
+  form.append("drug", input.drug);
+  form.append("source_name", input.source_name);
+  form.append("source_type", input.source_type);
+
+  return request<IngestResponse>("/ingest", { method: "POST", body: form });
+}
+
 export function generateContent(input: {
   drug: string;
   profile: HCPProfile;
   channel: Channel;
+  document_id?: string | null;
 }) {
   return request<GenerateResponse>("/generate", {
     method: "POST",
