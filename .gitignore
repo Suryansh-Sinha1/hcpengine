@@ -48,3 +48,9 @@ Thumbs.db
 desktop.ini
 
 *.pem
+
+# ---------- Ingested claim data ----------
+# Extracted claims are machine-generated demo output. Only the curated
+# seed file is version-controlled.
+backend/data/claims/*.json
+!backend/data/claims/apixaban.json

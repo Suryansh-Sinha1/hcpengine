@@ -20,13 +20,16 @@ class Settings(BaseSettings):
     ollama_num_ctx: int = 4096
     generation_temperature: float = 0.2
 
+    # Sender identity used in generated correspondence
+    sender_name: str = "Medical Affairs"
+    sender_org: str = "Clinical Communications"
+
     # Data
     claims_dir: Path = BACKEND_ROOT / "data" / "claims"
     database_path: Path = BACKEND_ROOT / "data" / "decisions.db"
 
     # Workflow
     max_attempts: int = 3
-
     ingest_chunk_chars: int = 2500
     ingest_max_chunks: int = 8
 
