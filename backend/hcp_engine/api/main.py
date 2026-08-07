@@ -56,11 +56,7 @@ def to_claim_out(claim: Claim) -> ClaimOut:
 
 
 def rebuild_kb_state(app: FastAPI) -> ClaimsKB:
-    """Reload the KB from disk and rebuild everything derived from it.
-
-    The TF-IDF matrix and the compiled graph both close over the KB, so a new
-    claims file means both must be rebuilt. Cheap at this scale.
-    """
+    """Reload the KB from disk and rebuild everything derived from it."""
     kb = ClaimsKB.from_dir(settings.claims_dir)
     retriever = TfidfRetriever(kb)
     app.state.kb = kb
@@ -274,7 +270,9 @@ def generate_content(
         )
 
     try:
-        state = run_workflow(graph, req.drug, req.profile, req.channel)
+        state = run_workflow(
+            graph, req.drug, req.profile, req.channel, req.document_id
+        )
     except Exception as exc:
         logger.exception("Workflow failed")
         raise HTTPException(

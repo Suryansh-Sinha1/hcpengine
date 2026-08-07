@@ -71,14 +71,45 @@ def assemble_claim_set(
     drug: str,
     *,
     top_k: int = 4,
+    document_id: str | None = None,
+    max_risk_claims: int = 4,
 ) -> list[Claim]:
-    query = f"{profile.therapy_area} {profile.specialty}"
-    retrieved = retriever.search(query, drug=drug, top_k=top_k)
-    selected: dict[str, Claim] = {r.claim.id: r.claim for r in retrieved}
+    """Build the claim set a draft is allowed to use.
 
-    mandatory_types = {ClaimType.WARNING, ClaimType.CONTRAINDICATION}
-    for claim in kb.for_drug(drug):
-        if claim.claim_type in mandatory_types:
-            selected[claim.id] = claim
+    When document_id is given, claims are drawn from that document only - both
+    benefit and risk - so the prompt uses one ID scheme. Mixing schemes makes
+    the model invent plausible-looking IDs from the other scheme. Risk claims
+    fall back to other sources only if the chosen document has none.
+    """
+    query = f"{profile.therapy_area} {profile.specialty}"
+    retrieved = retriever.search(query, drug=drug, top_k=40)
+
+    selected: dict[str, Claim] = {}
+    for r in retrieved:
+        if document_id and r.claim.reference.document_id != document_id:
+            continue
+        selected[r.claim.id] = r.claim
+        if len(selected) >= top_k:
+            break
+
+    mandatory = {ClaimType.WARNING, ClaimType.CONTRAINDICATION}
+    pool = [c for c in kb.for_drug(drug) if c.claim_type in mandatory]
+
+    scoped = (
+        [c for c in pool if c.reference.document_id == document_id]
+        if document_id
+        else []
+    )
+    chosen = scoped or pool
+
+    # Boxed warnings first, then capped - a long claim list is harder for a
+    # small model to track, and fair balance needs the most serious risks,
+    # not all of them.
+    chosen = sorted(
+        chosen,
+        key=lambda c: 0 if "BOXED WARNING" in c.reference.section.upper() else 1,
+    )
+    for claim in chosen[:max_risk_claims]:
+        selected[claim.id] = claim
 
     return list(selected.values())

@@ -6,7 +6,11 @@ from typing import Annotated, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from ..generation.generator import DraftGenerator, GenerationError
+from ..generation.generator import (
+    DraftGenerator,
+    GenerationError,
+    ModelUnavailableError,
+)
 from ..kb.loader import ClaimsKB
 from ..kb.retriever import Retriever, assemble_claim_set
 from ..models import Channel, Claim, Draft, HCPProfile
@@ -20,6 +24,7 @@ class ContentState(TypedDict, total=False):
     drug: str
     profile: HCPProfile
     channel: Channel
+    document_id: str | None
 
     claims: list[Claim]
     draft: Draft | None
@@ -43,13 +48,20 @@ def build_workflow(
 ):
     def retrieve_node(state: ContentState) -> dict:
         claims = assemble_claim_set(
-            retriever, kb, state["profile"], state["drug"]
+            retriever,
+            kb,
+            state["profile"],
+            state["drug"],
+            document_id=state.get("document_id"),
+        )
+        scope = (
+            f" from {state['document_id']}" if state.get("document_id") else ""
         )
         return {
             "claims": claims,
             "max_attempts": max_attempts,
             "attempts": 0,
-            "history": [f"Assembled {len(claims)} approved claims."],
+            "history": [f"Assembled {len(claims)} approved claims{scope}."],
         }
 
     def generate_node(state: ContentState) -> dict:
@@ -72,6 +84,14 @@ def build_workflow(
                 previous_body=previous_body,
                 failures=failures,
             )
+        except ModelUnavailableError as exc:
+            logger.error("Model unreachable, abandoning run: %s", exc)
+            return {
+                "draft": None,
+                "attempts": state.get("max_attempts", max_attempts),
+                "error": str(exc),
+                "history": [f"Attempt {attempt}: {exc}"],
+            }
         except GenerationError as exc:
             logger.warning("Generation attempt %d failed: %s", attempt, exc)
             return {
@@ -161,12 +181,14 @@ def run_workflow(
     drug: str,
     profile: HCPProfile,
     channel: Channel = Channel.EMAIL,
+    document_id: str | None = None,
 ) -> ContentState:
     return app.invoke(
         {
             "drug": drug,
             "profile": profile,
             "channel": channel,
+            "document_id": document_id,
             "history": [],
         }
     )
